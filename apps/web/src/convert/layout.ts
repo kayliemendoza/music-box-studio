@@ -23,6 +23,11 @@ export function beatToMm(startBeat: number, layout: StripLayoutConfig, paper: Pa
   return gridColumnToMm(beatToGridColumn(startBeat, layout), paper)
 }
 
+/** Distance (mm) from the very start of the piece's timeline, ignoring any one page's leading margin. Used for page splitting. */
+export function beatToTimelineMm(startBeat: number, layout: StripLayoutConfig, paper: PaperProfile): number {
+  return beatToGridColumn(startBeat, layout) * paper.timingGridSpacingMm
+}
+
 /** Vertical center (mm from paper edge carrying lane 1) of a given lane number (1-based). */
 export function laneToMm(lane: number, paper: PaperProfile): number {
   return paper.firstLaneOffsetMm + (lane - 1) * paper.laneSpacingMm
