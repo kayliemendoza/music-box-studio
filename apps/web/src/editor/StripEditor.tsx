@@ -33,7 +33,7 @@ export function StripEditor() {
   const updateLayoutConfig = useStudioStore((s) => s.updateLayoutConfig)
   const shiftFromBeat = useStudioStore((s) => s.shiftFromBeat)
 
-  const [pxPerMm, setPxPerMm] = useState(4)
+  const [pxPerMm, setPxPerMm] = useState(7)
   const [addMode, setAddMode] = useState(false)
   const [snapToGrid, setSnapToGrid] = useState(true)
   const dragState = useRef<{ id: string; startX: number; originalBeat: number } | null>(null)
@@ -190,7 +190,7 @@ export function StripEditor() {
             return (
               <g key={lane.lane}>
                 <line x1={0} y1={mmToPx(y)} x2={mmToPx(contentWidthMm)} y2={mmToPx(y)} stroke="#ddd" strokeWidth={1} />
-                <text x={2} y={mmToPx(y) - 2} fontSize={10} fill="#666">{label}</text>
+                <text x={2} y={mmToPx(y) - 1} fontSize={Math.min(9, mmToPx(paper.laneSpacingMm) - 1)} fill="#666">{label}</text>
               </g>
             )
           })}

@@ -67,6 +67,8 @@ export interface StudioState {
   addManualEvent: (partial: Pick<NoteEvent, 'midiPitch' | 'startBeat' | 'durationBeats'>) => void
   /** Insert (deltaBeats > 0) or remove (deltaBeats < 0) time at thresholdBeat, shifting everything at/after it. Used for measure insertion/removal and timeline stretch repairs. */
   shiftFromBeat: (thresholdBeat: number, deltaBeats: number) => void
+  confirmOmrReview: (eventId: string) => void
+  confirmAllOmrReviews: () => void
 
   acceptConflict: (key: string) => void
   unacceptConflict: (key: string) => void
@@ -235,6 +237,19 @@ export const useStudioStore = create<StudioState>((set, get) => ({
         ? { ...s.score, events: s.score.events.map((e) => (e.startBeat >= thresholdBeat ? { ...e, startBeat: e.startBeat + deltaBeats } : e)) }
         : s.score,
       manualEvents: s.manualEvents.map((e) => (e.startBeat >= thresholdBeat ? { ...e, startBeat: e.startBeat + deltaBeats } : e)),
+    }))
+    get().recompute()
+  },
+
+  confirmOmrReview: (eventId) => {
+    set((s) => ({
+      score: s.score ? { ...s.score, events: s.score.events.map((e) => (e.id === eventId ? { ...e, needsReview: false } : e)) } : s.score,
+    }))
+    get().recompute()
+  },
+  confirmAllOmrReviews: () => {
+    set((s) => ({
+      score: s.score ? { ...s.score, events: s.score.events.map((e) => ({ ...e, needsReview: false })) } : s.score,
     }))
     get().recompute()
   },

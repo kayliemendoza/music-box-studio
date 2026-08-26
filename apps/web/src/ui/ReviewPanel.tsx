@@ -12,13 +12,35 @@ export function ReviewPanel() {
   const restoreEvent = useStudioStore((s) => s.restoreEvent)
   const setManualPitch = useStudioStore((s) => s.setManualPitch)
   const manualOverrides = useStudioStore((s) => s.manualOverrides)
+  const confirmOmrReview = useStudioStore((s) => s.confirmOmrReview)
+  const confirmAllOmrReviews = useStudioStore((s) => s.confirmAllOmrReviews)
 
   const pending = events.filter((e) => !e.isRest && e.conversion && !e.conversion.approved && !manualOverrides[e.id]?.deleted && e.status !== 'removed')
   const deleted = events.filter((e) => manualOverrides[e.id]?.deleted)
+  const omrPending = events.filter((e) => e.needsReview)
 
   return (
     <div className="panel">
       <h2>3. Review &amp; verify</h2>
+
+      {omrPending.length > 0 && (
+        <section>
+          <h3>Optical Music Recognition uncertainty ({omrPending.length})</h3>
+          <p className="muted">
+            These notes came from OMR (scanned PDF/image), not MusicXML/MIDI. Recognition is never guaranteed accurate -
+            compare each one against your original scan before confirming. Export is blocked until every OMR note is confirmed.
+          </p>
+          <button type="button" onClick={confirmAllOmrReviews}>Confirm all OMR notes as reviewed</button>
+          <ul className="review-list">
+            {omrPending.map((ev) => (
+              <li key={ev.id}>
+                Measure {ev.sourceMeasure}, beat {ev.sourceBeat.toFixed(2)}: recognized as {ev.writtenName}
+                <button type="button" onClick={() => confirmOmrReview(ev.id)}>Confirm</button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {pending.length > 0 && (
         <section>

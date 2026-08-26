@@ -155,8 +155,33 @@ public SaaS with this service in the request path, get that reviewed properly be
 
 ## What's genuinely verified vs. not
 
-See the top-level task report for exactly what was run end-to-end in this environment
-(a real Audiveris CLI invocation against a real, LilyPond-rendered melody, producing
-correct MusicXML pitches) versus what is implemented-but-not-exercised (the Docker image
-build/run path, multi-page handling, the `dpi` hint). Don't take "the code is written" as
-"this was proven to work in a container" without checking that report.
+**Verified end-to-end in the environment this was built in:** `docker build` on this exact
+Dockerfile succeeded; the resulting container's `/health` reported the Audiveris binary
+installed; a real LilyPond-rendered PNG of a one-octave C-major scale (C D E F G A B C on
+a treble staff) was POSTed to `/omr` over real HTTP, and the response was `HTTP 200` with
+`needsReview: true`, `pages: 1`, and MusicXML whose `<pitch><step>` values were exactly
+`C D E F G A B C` — i.e. Audiveris actually read the notes correctly, not a mock. See the
+top-level task report for the full trace.
+
+**Known limitation, not fixed (out of scope for the time budget):** the container logs a
+warning `Could not initialize TessBaseAPI languages: eng in legacy mode` — the
+`tesseract-ocr-eng` package's `eng.traineddata` is the LSTM-only variant, and Audiveris'
+bundled Tesseract wants a legacy-compatible trained-data file for full OCR support. This
+only affects lyrics/free-text recognition on a score, not note/pitch/rhythm recognition
+(which was verified working). A `tessdata` file with legacy support (e.g. from
+tesseract-ocr's `tessdata` GitHub repo, `eng.traineddata` "best"/legacy build) would
+resolve it if lyric OCR quality matters for a given deployment.
+
+**Not exercised:** multi-page PDF handling beyond the single-sheet code path, the `dpi`
+hint parameter (intentionally not wired to any Audiveris flag — see the field's docstring
+in `app/main.py`), and the `page_start`/`page_end` → `-sheets` parameter passthrough
+(implemented per Audiveris' documented `-sheets int[]` CLI flag, but not run against a
+real multi-page input in this session).
+
+**Base image substitution:** the task suggested `eclipse-temurin` as the JDK base. In this
+build environment, Docker Hub (which serves `eclipse-temurin`) returned `403 Forbidden`
+through the network egress policy on every image pull attempted (`debian`, `ubuntu`,
+`quay.io`, `ghcr.io` were all blocked the same way); `mcr.microsoft.com` was reachable, so
+this Dockerfile uses `mcr.microsoft.com/openjdk/jdk:21-ubuntu` (Ubuntu 22.04, OpenJDK 21)
+instead. Functionally equivalent for this purpose; swap it back if your environment can
+reach Docker Hub and you prefer Eclipse Temurin specifically.

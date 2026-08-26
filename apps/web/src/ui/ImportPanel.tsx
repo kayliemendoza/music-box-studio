@@ -2,8 +2,12 @@ import { useRef, useState } from 'react'
 import { useStudioStore } from '../state/store'
 import { parseMusicXmlFile } from '../import/musicxml'
 import { parseMidiFile } from '../import/midi'
+import { importFromOmr } from '../import/omrImport'
+import { OmrRequestError } from '../import/omrClient'
 import { TWINKLE_MUSICXML } from '../fixtures/twinkleTwinkle'
 import { parseMusicXmlString } from '../import/musicxml'
+
+const OMR_SERVICE_URL = (import.meta.env.VITE_OMR_SERVICE_URL as string | undefined) ?? ''
 
 export function ImportPanel() {
   const loadScore = useStudioStore((s) => s.loadScore)
@@ -25,14 +29,26 @@ export function ImportPanel() {
         const { score, warnings } = await parseMidiFile(file)
         loadScore(score, warnings)
       } else if (lower.endsWith('.pdf') || lower.endsWith('.png') || lower.endsWith('.jpg') || lower.endsWith('.jpeg')) {
-        setError(
-          'PDF/image import requires Optical Music Recognition. This needs the self-hosted OMR service (see README: "OMR service") running and configured via VITE_OMR_SERVICE_URL. It is not wired into this build automatically - OMR results are never guaranteed accurate and always require the verification screen before export.',
-        )
+        if (!OMR_SERVICE_URL) {
+          setError(
+            'PDF/image import requires Optical Music Recognition, which needs the self-hosted OMR service (see music-box-studio/services/omr-service/README.md) running and configured via VITE_OMR_SERVICE_URL. OMR results are never guaranteed accurate and always require the verification screen (Review tab) before export.',
+          )
+        } else {
+          const { score, warnings } = await importFromOmr(file, OMR_SERVICE_URL)
+          loadScore(score, [
+            'This score came from Optical Music Recognition - it may contain mistakes. Every note is flagged for review; confirm each one against your original scan on the Review tab before exporting.',
+            ...warnings,
+          ])
+        }
       } else {
         setError(`Unsupported file type: ${file.name}. Supported: .musicxml, .xml, .mxl, .mid, .midi (PDF/image via OMR service, see README).`)
       }
     } catch (e) {
-      setError((e as Error).message)
+      if (e instanceof OmrRequestError) {
+        setError(`OMR service error: ${e.message}`)
+      } else {
+        setError((e as Error).message)
+      }
     } finally {
       setBusy(false)
     }
