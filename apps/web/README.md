@@ -1,32 +1,38 @@
-# React + TypeScript + Vite
+# Music Box Studio — web app
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+See the [top-level README](../../README.md) for the full project overview, workflow,
+calibration/export guidance, and licensing/limitations. This directory is the frontend:
+Vite + React + TypeScript, tested with Vitest.
 
-Currently, two official plugins are available:
+## Scripts
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm run dev       # local dev server
+npm run build     # tsc -b && vite build
+npm test          # vitest run
+npm run lint      # oxlint
+npm run preview   # serve the production build locally
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## Optional: PDF/image import
+
+Copy `.env.example` to `.env.local` and set `VITE_OMR_SERVICE_URL` to a running instance of
+`../services/omr-service` if you want to import scanned PDF/image sheet music. Not required
+for MusicXML/MIDI import, which work out of the box.
+
+## Layout
+
+```
+src/
+  model/      NoteEvent, MechanismProfile, PaperProfile, ProjectFile types
+  music/      MIDI-pitch <-> note-name utilities
+  import/     MusicXML / MIDI / OMR parsers
+  convert/    pitch mapping, transposition scoring, conflict detection, validation gate
+  export/     SVG / PDF / DXF / CSV / MIDI / MusicXML exporters, page splitting
+  state/      zustand store tying it all together
+  editor/     the 30-lane punch-strip canvas
+  score/      OpenSheetMusicDisplay wrapper
+  playback/   Tone.js scheduler
+  calibration/ calibration wizard + printable calibration page
+  ui/         everything else (import/review/export panels, note table, icons)
+```
