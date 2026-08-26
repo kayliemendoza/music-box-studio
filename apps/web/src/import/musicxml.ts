@@ -321,6 +321,7 @@ export function parseMusicXmlString(xmlText: string, fallbackTitle = 'Untitled')
     parts,
     measureCount: maxMeasure,
     sourceFormat: 'musicxml',
+    sourceMusicXml: xmlText,
   }
 
   return { score, warnings }

@@ -1,0 +1,12 @@
+services:
+  omr-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: music-box-studio/omr-service:local
+    container_name: music-box-omr-service
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+    # Audiveris can be memory-hungry on dense scores; give it some headroom.
+    mem_limit: 2g

@@ -16,14 +16,20 @@ interface Entity {
 }
 
 class Circle implements Entity {
-  constructor(private layer: string, private x: number, private y: number, private radius: number) {}
+  layer: string; x: number; y: number; radius: number
+  constructor(layer: string, x: number, y: number, radius: number) {
+    this.layer = layer; this.x = x; this.y = y; this.radius = radius
+  }
   toDxf(): string[] {
     return ['0', 'CIRCLE', '8', this.layer, '10', fmt(this.x), '20', fmt(this.y), '30', '0.0', '40', fmt(this.radius)]
   }
 }
 
 class Line implements Entity {
-  constructor(private layer: string, private x1: number, private y1: number, private x2: number, private y2: number) {}
+  layer: string; x1: number; y1: number; x2: number; y2: number
+  constructor(layer: string, x1: number, y1: number, x2: number, y2: number) {
+    this.layer = layer; this.x1 = x1; this.y1 = y1; this.x2 = x2; this.y2 = y2
+  }
   toDxf(): string[] {
     return [
       '0', 'LINE', '8', this.layer,
@@ -34,7 +40,10 @@ class Line implements Entity {
 }
 
 class TextEntity implements Entity {
-  constructor(private layer: string, private x: number, private y: number, private heightMm: number, private text: string) {}
+  layer: string; x: number; y: number; heightMm: number; text: string
+  constructor(layer: string, x: number, y: number, heightMm: number, text: string) {
+    this.layer = layer; this.x = x; this.y = y; this.heightMm = heightMm; this.text = text
+  }
   toDxf(): string[] {
     return ['0', 'TEXT', '8', this.layer, '10', fmt(this.x), '20', fmt(this.y), '30', '0.0', '40', fmt(this.heightMm), '1', this.text]
   }

@@ -1,8 +1,5 @@
 import { describe, it, expect } from 'vitest'
 import { serializeProject, deserializeProject, PROJECT_FILE_VERSION, type ProjectFile } from '../model/project'
-import { buildY30H2Profile } from '../model/mechanism'
-import { buildDefaultPaperProfile } from '../model/paper'
-import { defaultStripLayoutConfig } from '../convert/layout'
 import { buildTestArrangement } from './testHelpers'
 import { newId } from '../model/types'
 

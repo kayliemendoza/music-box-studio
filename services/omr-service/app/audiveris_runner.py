@@ -14,7 +14,6 @@ import asyncio
 import logging
 import os
 import re
-import shutil
 import tempfile
 import zipfile
 from dataclasses import dataclass, field

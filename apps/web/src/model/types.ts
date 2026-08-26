@@ -64,6 +64,8 @@ export interface ImportedScore {
   divisionsPerQuarter?: number
   sourceFormat: 'musicxml' | 'midi' | 'omr' | 'manual'
   omrPageImages?: string[] // data URLs, only for OMR-sourced scores
+  /** Original MusicXML text, when the source format carries engraved notation (musicxml/omr). Used to render conventional notation via OSMD. */
+  sourceMusicXml?: string
 }
 
 export interface PartInfo {
