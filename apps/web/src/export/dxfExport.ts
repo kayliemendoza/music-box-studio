@@ -38,8 +38,16 @@ export function generateStripDxf(
     const y = laneToMm(lane.lane, paper)
     doc.addLine(SILHOUETTE_LAYERS.PRINT_GUIDES.name, 0, y, paper.maxSheetLengthMm, y)
   }
-  doc.addLine(SILHOUETTE_LAYERS.PRINT_GUIDES.name, paper.leadingMarginMm, 0, paper.leadingMarginMm, paper.widthMm)
-  doc.addLine(SILHOUETTE_LAYERS.PRINT_GUIDES.name, paper.maxSheetLengthMm - paper.endingMarginMm, 0, paper.maxSheetLengthMm - paper.endingMarginMm, paper.widthMm)
+  const leadingEdgeMm = page.leadingEdgeKind === 'insert' ? paper.leadingMarginMm : paper.spliceClearanceMm
+  const trailingEdgeMm = page.trailingEdgeKind === 'tail' ? paper.endingMarginMm : paper.spliceClearanceMm
+  doc.addLine(SILHOUETTE_LAYERS.PRINT_GUIDES.name, leadingEdgeMm, 0, leadingEdgeMm, paper.widthMm)
+  doc.addLine(SILHOUETTE_LAYERS.PRINT_GUIDES.name, paper.maxSheetLengthMm - trailingEdgeMm, 0, paper.maxSheetLengthMm - trailingEdgeMm, paper.widthMm)
+  if (page.leadingEdgeKind === 'join') {
+    doc.addText(SILHOUETTE_LAYERS.NO_CUT_LABELS.name, leadingEdgeMm + 1, paper.widthMm + 6, 2, 'JOIN - zigzag splice to previous sheet, keep clear of holes')
+  }
+  if (page.trailingEdgeKind === 'join') {
+    doc.addText(SILHOUETTE_LAYERS.NO_CUT_LABELS.name, paper.maxSheetLengthMm - trailingEdgeMm - 60, paper.widthMm + 6, 2, 'JOIN - zigzag splice to next sheet, keep clear of holes')
+  }
 
   const crossSize = 3
   const corners: Array<[number, number]> = [[3, 3], [paper.maxSheetLengthMm - 3, 3], [3, paper.widthMm - 3], [paper.maxSheetLengthMm - 3, paper.widthMm - 3]]

@@ -54,8 +54,16 @@ paper-roll music boxes). Confirmed matching:
   fine; only *repeats on the same lane* are constrained)
 - the 60–95 BPM recommended hand-crank tempo range
 - the hole's *trailing edge* (not its center) being what actually triggers the tone
-- not taping strips together on a 30-note box (use a paper roll for long pieces instead) -
-  reflected in this app never assuming physical strips get joined
+
+The guide is cautious about taping strips together on a 30-note box (recommends a paper
+roll instead) since an imprecise join can jam the mechanism. This app's default matches
+that: every sheet is fully independent, with its own full leading/ending margins. If
+you've verified your own splicing technique works (a precise zigzag cut, taped seamless,
+is one reported to work well), the calibration wizard has an opt-in "Allow taped joins"
+toggle plus a "splice clearance" field - turning it on fits more music per physical sheet
+by only reserving that smaller clearance at internal joins instead of a full margin twice,
+while the first and last sheets still get their real leading/ending margins. The exports
+(SVG/DXF/PDF) label exactly where each join falls so you know where to cut and tape.
 
 ## Quick start
 

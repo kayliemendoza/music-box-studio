@@ -6,7 +6,7 @@ import { downloadBlob } from '../export/download'
 
 type NumericField = Exclude<
   keyof PaperProfile,
-  'id' | 'name' | 'isCalibrated' | 'feedDirection' | 'highNoteSide' | 'unusableRegionsMm'
+  'id' | 'name' | 'isCalibrated' | 'feedDirection' | 'highNoteSide' | 'unusableRegionsMm' | 'allowTapedJoins'
 >
 
 const FIELDS: Array<{ key: NumericField; label: string; hint: string }> = [
@@ -22,6 +22,7 @@ const FIELDS: Array<{ key: NumericField; label: string; hint: string }> = [
   { key: 'triggerEdgeOffsetMm', label: 'Trigger edge offset (mm)', hint: 'Hook reads an edge of the hole, not its center' },
   { key: 'printerCalibrationCorrectionMm', label: 'Printer calibration correction (mm)', hint: 'From your 100mm test box measurement' },
   { key: 'silhouetteCuttingOffsetMm', label: 'Silhouette cutting offset (mm)', hint: 'From a Curio 2 test cut' },
+  { key: 'spliceClearanceMm', label: 'Splice clearance (mm)', hint: 'Hole-free zone on each side of a taped join - only matters if "Allow taped joins" is on below' },
 ]
 
 export function CalibrationWizard() {
@@ -76,6 +77,25 @@ export function CalibrationWizard() {
               <option value="left">Left</option>
               <option value="right">Right</option>
             </select>
+          </label>
+
+          <h3>Multi-sheet joins</h3>
+          <label className="field-row">
+            <span>
+              Allow taped joins between sheets
+              <br />
+              <small className="muted">
+                Off (default) = every sheet is fully independent, per the community guide's caution about jamming. Turn
+                this on only if you've verified your own splicing technique (e.g. a precise zigzag cut) works reliably -
+                it lets a long song use fewer sheets by spending only "splice clearance" at internal joins instead of a
+                full leading + ending margin at every break.
+              </small>
+            </span>
+            <input
+              type="checkbox"
+              checked={paper.allowTapedJoins}
+              onChange={(e) => setPaperProfile({ ...paper, allowTapedJoins: e.target.checked, isCalibrated: false })}
+            />
           </label>
 
           <h3>Unusable / join regions</h3>

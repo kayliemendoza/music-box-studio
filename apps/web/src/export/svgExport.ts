@@ -45,8 +45,10 @@ export function generateStripSvg(
       : lane.soundingNoteName
     parts.push(`<text x="1" y="${y - 0.3}" font-size="1.6" fill="${SILHOUETTE_LAYERS.PRINT_GUIDES.cssColor}" stroke="none">${esc(label)}</text>`)
   }
-  parts.push(`<line x1="${paper.leadingMarginMm}" y1="${stripTop}" x2="${paper.leadingMarginMm}" y2="${stripTop + paper.widthMm}" stroke-dasharray="0.5,0.5"/>`)
-  parts.push(`<line x1="${widthMm - paper.endingMarginMm}" y1="${stripTop}" x2="${widthMm - paper.endingMarginMm}" y2="${stripTop + paper.widthMm}" stroke-dasharray="0.5,0.5"/>`)
+  const leadingEdgeMm = page.leadingEdgeKind === 'insert' ? paper.leadingMarginMm : paper.spliceClearanceMm
+  const trailingEdgeMm = page.trailingEdgeKind === 'tail' ? paper.endingMarginMm : paper.spliceClearanceMm
+  parts.push(`<line x1="${leadingEdgeMm}" y1="${stripTop}" x2="${leadingEdgeMm}" y2="${stripTop + paper.widthMm}" stroke-dasharray="${page.leadingEdgeKind === 'join' ? '0.3,0.3' : '0.5,0.5'}"/>`)
+  parts.push(`<line x1="${widthMm - trailingEdgeMm}" y1="${stripTop}" x2="${widthMm - trailingEdgeMm}" y2="${stripTop + paper.widthMm}" stroke-dasharray="${page.trailingEdgeKind === 'join' ? '0.3,0.3' : '0.5,0.5'}"/>`)
   for (const region of paper.unusableRegionsMm) {
     parts.push(
       `<rect x="${region.startMm}" y="${stripTop}" width="${region.endMm - region.startMm}" height="${paper.widthMm}" fill="${SILHOUETTE_LAYERS.PRINT_GUIDES.cssColor}" fill-opacity="0.15" stroke="none"/>`,
@@ -92,6 +94,12 @@ export function generateStripSvg(
   parts.push(`<text x="2" y="10" font-size="3">Do NOT use "Fit to Page" - scaling will misalign every hole.</text>`)
   parts.push(`<text x="2" y="14" font-size="2.4">Mechanism: ${esc(profile.name)} | Paper: ${esc(paper.name)} | Strip ${page.pageNumber} of ${totalPages} | Feed: ${esc(paper.feedDirection)}</text>`)
   parts.push(`<text x="2" y="${arrowY + 5}" font-size="2.2">Feed direction -&gt; (arrow above). High-note side: ${esc(paper.highNoteSide)}.</text>`)
+  if (page.leadingEdgeKind === 'join') {
+    parts.push(`<text x="${leadingEdgeMm + 1}" y="${stripTop - 1}" font-size="2.2" fill="${SILHOUETTE_LAYERS.NO_CUT_LABELS.cssColor}">JOIN - zigzag-cut splice to previous sheet here, keep clear of holes</text>`)
+  }
+  if (page.trailingEdgeKind === 'join') {
+    parts.push(`<text x="${widthMm - trailingEdgeMm - 60}" y="${stripTop - 1}" font-size="2.2" fill="${SILHOUETTE_LAYERS.NO_CUT_LABELS.cssColor}">JOIN - zigzag-cut splice to next sheet here, keep clear of holes</text>`)
+  }
   parts.push('</g>')
 
   // --- CUT_OUTLINE: only when explicitly approved ---

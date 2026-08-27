@@ -100,9 +100,14 @@ export function validateForExport(
   try {
     pages = splitIntoPages(events, paper, layout)
     for (const page of pages) {
+      // A 'join' edge only needs the (much smaller) splice clearance; only a true
+      // 'insert'/'tail' edge needs the full leading/ending margin.
+      const trailingBoundMm =
+        page.trailingEdgeKind === 'tail' ? paper.maxSheetLengthMm - paper.endingMarginMm : paper.maxSheetLengthMm - paper.spliceClearanceMm
+      const leadingBoundMm = page.leadingEdgeKind === 'insert' ? paper.leadingMarginMm : paper.spliceClearanceMm
       for (const hole of page.holes) {
-        const overEnd = hole.localMm > paper.maxSheetLengthMm - paper.endingMarginMm
-        const underStart = hole.localMm < paper.leadingMarginMm - 1e-6
+        const overEnd = hole.localMm > trailingBoundMm
+        const underStart = hole.localMm < leadingBoundMm - 1e-6
         if (overEnd || underStart || hole.inUnusableRegion) outOfRegionCount++
       }
     }
@@ -125,7 +130,10 @@ export function validateForExport(
     removed: pitched.filter((e) => e.status === 'removed').length,
     unresolved: pitched.filter((e) => e.status === 'unresolved' || (e.conversion && !e.conversion.approved)).length,
     mechanicalConflicts: unacceptedConflicts.length,
-    totalStripLengthMm: pages.reduce((sum, p) => sum + Math.min(paper.maxSheetLengthMm, p.contentLengthMm + paper.endingMarginMm), 0),
+    totalStripLengthMm: pages.reduce((sum, p) => {
+      const trailingBufferMm = p.trailingEdgeKind === 'tail' ? paper.endingMarginMm : paper.spliceClearanceMm
+      return sum + Math.min(paper.maxSheetLengthMm, p.contentLengthMm + trailingBufferMm)
+    }, 0),
     numberOfSheets: pages.length,
     estimatedPlayingTimeSeconds: totalPlayingTimeSeconds(events),
   }

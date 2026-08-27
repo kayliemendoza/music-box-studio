@@ -46,6 +46,22 @@ export interface PaperProfile {
 
   printerCalibrationCorrectionMm: number
   silhouetteCuttingOffsetMm: number
+
+  /**
+   * If true, a song spanning multiple physical sheets is exported assuming you'll
+   * physically join them (e.g. a precise zigzag-cut splice, taped seamless) rather than
+   * treating every sheet as fully independent. Off by default - taping strips together is
+   * a real risk of jamming the mechanism (see the community guide) unless done carefully,
+   * so this is opt-in for someone who has verified their own splicing technique works.
+   */
+  allowTapedJoins: boolean
+  /**
+   * Hole-free clearance kept on each side of an internal join, in mm, when
+   * allowTapedJoins is true. Much smaller than leadingMarginMm/endingMarginMm - a join
+   * doesn't need room to feed the strip into the mechanism, just room for the splice
+   * itself (the cut + taped seam) to pass the trigger point without a hole sitting on it.
+   */
+  spliceClearanceMm: number
 }
 
 export function buildDefaultPaperProfile(): PaperProfile {
@@ -68,10 +84,12 @@ export function buildDefaultPaperProfile(): PaperProfile {
     triggerEdgeOffsetMm: 0,
     printerCalibrationCorrectionMm: 0,
     silhouetteCuttingOffsetMm: 0,
+    allowTapedJoins: false,
+    spliceClearanceMm: 4, // roughly one or two grid columns at default spacing - editable placeholder, confirm against your own splice technique
   }
 }
 
-/** Usable length for playable holes on one sheet, after leader/trailer margins. */
+/** Usable length for playable holes on one sheet, after leader/trailer margins (independent-sheets mode). */
 export function usablePlayLengthMm(paper: PaperProfile): number {
   return Math.max(0, paper.maxSheetLengthMm - paper.leadingMarginMm - paper.endingMarginMm)
 }

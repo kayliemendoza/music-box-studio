@@ -141,4 +141,20 @@ describe('DXF export: Silhouette cut-path safety', () => {
       expect(dxf).toContain(name)
     }
   })
+
+  it('labels an internal join edge as a JOIN on a non-cut layer in spliced mode, and still only cuts hole geometry on CUT_HOLES', () => {
+    const { events, profile, paper, layout } = buildTestArrangement(40, 4)
+    const splicedPaper = { ...paper, maxSheetLengthMm: 120, allowTapedJoins: true, spliceClearanceMm: 4 }
+    const pages = splitIntoPages(events, splicedPaper, layout)
+    const joinedPage = pages.find((p) => p.leadingEdgeKind === 'join' || p.trailingEdgeKind === 'join')
+    expect(joinedPage).toBeDefined()
+
+    const dxf = generateStripDxf(joinedPage!, pages.length, profile, splicedPaper, { includeOutlineCut: false })
+    expect(dxf).toMatch(/JOIN/)
+    const entities = parseEntities(dxf)
+    const textEntities = entities.filter((e) => e.type === 'TEXT')
+    expect(textEntities.every((e) => e.layer === 'NO_CUT_LABELS')).toBe(true)
+    const circles = entities.filter((e) => e.type === 'CIRCLE')
+    expect(circles.every((c) => c.layer === 'CUT_HOLES')).toBe(true)
+  })
 })

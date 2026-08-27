@@ -117,6 +117,24 @@ function drawTile(
     })
   }
 
+  // Leading edge marker (only meaningful on the tile that actually shows the strip's start)
+  if (tile.tileIndex === 1) {
+    const leadingEdgeMm = page.leadingEdgeKind === 'insert' ? paper.leadingMarginMm : paper.spliceClearanceMm
+    pdfPage.drawLine({ start: { x: mm(leadingEdgeMm), y: flipY(stripTop, tile.pageHeightMm) }, end: { x: mm(leadingEdgeMm), y: flipY(stripTop + paper.widthMm, tile.pageHeightMm) }, thickness: 0.3, color: black, dashArray: [1, 1] })
+    if (page.leadingEdgeKind === 'join') {
+      pdfPage.drawText('JOIN - zigzag splice to previous sheet, keep clear of holes', { x: mm(leadingEdgeMm + 1), y: flipY(stripTop - 1, tile.pageHeightMm), size: 4, font, color: black })
+    }
+  }
+  // Trailing edge marker (only meaningful on the tile that actually shows the strip's end)
+  if (tile.tileIndex === tile.tileCount) {
+    const trailingEdgeMm = page.trailingEdgeKind === 'tail' ? paper.endingMarginMm : paper.spliceClearanceMm
+    const xLocal = tile.tileWidthMm - trailingEdgeMm - tile.startMm
+    pdfPage.drawLine({ start: { x: mm(xLocal), y: flipY(stripTop, tile.pageHeightMm) }, end: { x: mm(xLocal), y: flipY(stripTop + paper.widthMm, tile.pageHeightMm) }, thickness: 0.3, color: black, dashArray: [1, 1] })
+    if (page.trailingEdgeKind === 'join') {
+      pdfPage.drawText('JOIN - zigzag splice to next sheet, keep clear of holes', { x: mm(Math.max(2, xLocal - 65)), y: flipY(stripTop - 1, tile.pageHeightMm), size: 4, font, color: black })
+    }
+  }
+
   // REGISTRATION_MARKS: 100mm calibration box (first tile only, to avoid repeating), corner crosses (every tile)
   if (tile.tileIndex === 1) {
     const calY = tile.pageHeightMm - FOOTER_BAND_MM + 22

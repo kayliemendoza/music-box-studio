@@ -60,4 +60,42 @@ describe('pre-export validation gate', () => {
     expect(result.summary.numberOfSheets).toBe(1)
     expect(result.summary.estimatedPlayingTimeSeconds).toBeGreaterThan(0)
   })
+
+  it('does not flag holes near an internal join as outside the usable region in spliced mode', () => {
+    const { events, profile, layout } = buildTestArrangement(40, 4)
+    const splicedPaper = {
+      ...buildTestArrangement().paper,
+      maxSheetLengthMm: 120,
+      leadingMarginMm: 20,
+      endingMarginMm: 20,
+      allowTapedJoins: true,
+      spliceClearanceMm: 4,
+      isCalibrated: true,
+    }
+    const result = validateForExport(events, profile, splicedPaper, layout, new Set())
+    expect(result.issues.some((i) => i.code === 'hole-outside-usable-region')).toBe(false)
+  })
+
+  it('still flags a hole that falls within the true ending margin of the final page', () => {
+    const { profile, layout } = buildTestArrangement()
+    const paper = {
+      ...buildTestArrangement().paper,
+      maxSheetLengthMm: 100,
+      leadingMarginMm: 20,
+      endingMarginMm: 20,
+      allowTapedJoins: true,
+      spliceClearanceMm: 4,
+      isCalibrated: true,
+    }
+    // Both notes stay on the same (single, final) page under the permissive splice-mode
+    // grouping capacity (100 - 4 = 96mm), but the second one's local position (20mm lead +
+    // 70mm = 90mm) falls inside the real 20mm ending margin (i.e. past 80mm) - which only
+    // matters because this page's trailing edge is a true 'tail', not a 'join'.
+    const notes = applyMechanismMapping(
+      [ev({ midiPitch: parseNoteName('C5').midi, startBeat: 0 }), ev({ midiPitch: parseNoteName('D5').midi, startBeat: 8.75 })],
+      profile,
+    ).map((e) => ({ ...e, conversion: e.conversion ? { ...e.conversion, approved: true } : e.conversion }))
+    const result = validateForExport(notes, profile, paper, layout, new Set())
+    expect(result.issues.some((i) => i.code === 'hole-outside-usable-region')).toBe(true)
+  })
 })
