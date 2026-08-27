@@ -12,10 +12,17 @@
  *                        (e.g. to move a minor-key piece into a register with fewer gaps).
  *   --voices=melody-only|melody-plus-bass|melody-plus-harmony   (default: melody-plus-harmony,
  *                        i.e. keep everything in the file - narrow it down if it sounds too dense.)
+ *   --melody-top-line   For chordal parts where the melody is written as the TOP note of a
+ *                        chord rather than its own separate voice (common in pop-piano
+ *                        arrangements) - collapses every simultaneous chord down to just its
+ *                        highest note. Voice selection alone can't fix this since MusicXML
+ *                        voice numbers don't distinguish "melody note" from "chord tone"
+ *                        within the same written voice.
  *
  * Examples:
  *   npx tsx scripts/exportPreviewMidi.ts ~/Desktop/song.musicxml
  *   npx tsx scripts/exportPreviewMidi.ts ~/Desktop/song.mid preview.mid --tempo=80 --transpose=-2
+ *   npx tsx scripts/exportPreviewMidi.ts ~/Desktop/piano-arrangement.musicxml --voices=melody-only --melody-top-line
  */
 import { readFileSync, writeFileSync } from 'node:fs'
 import { basename, extname } from 'node:path'
@@ -29,8 +36,12 @@ const dom = new JSDOM('')
 const { parseMusicXmlString } = await import('../src/import/musicxml.ts')
 const { parseMidiBuffer } = await import('../src/import/midi.ts')
 const { buildY30H2Profile } = await import('../src/model/mechanism.ts')
+const { buildDefaultPaperProfile } = await import('../src/model/paper.ts')
+const { defaultStripLayoutConfig } = await import('../src/convert/layout.ts')
 const { applyMechanismMapping } = await import('../src/convert/playability.ts')
 const { selectVoices } = await import('../src/convert/voiceSelection.ts')
+const { extractTopLineMelody } = await import('../src/convert/melodyExtraction.ts')
+const { detectSameLaneConflicts } = await import('../src/convert/conflicts.ts')
 const { exportConvertedMidi } = await import('../src/export/midiExport.ts')
 
 interface Args {
@@ -39,6 +50,7 @@ interface Args {
   tempo?: number
   transpose: number
   voices: VoiceSelectionMode
+  melodyTopLine: boolean
 }
 
 function parseArgs(argv: string[]): Args {
@@ -46,7 +58,7 @@ function parseArgs(argv: string[]): Args {
   const input = positional[0]
   if (!input) {
     console.error(
-      'Usage: npx tsx scripts/exportPreviewMidi.ts <input-file> [output.mid] [--tempo=NN] [--transpose=N] [--voices=melody-only|melody-plus-bass|melody-plus-harmony]',
+      'Usage: npx tsx scripts/exportPreviewMidi.ts <input-file> [output.mid] [--tempo=NN] [--transpose=N] [--voices=melody-only|melody-plus-bass|melody-plus-harmony] [--melody-top-line]',
     )
     process.exit(1)
   }
@@ -60,6 +72,7 @@ function parseArgs(argv: string[]): Args {
     tempo: tempoArg ? Number(tempoArg.split('=')[1]) : undefined,
     transpose: transposeArg ? Number(transposeArg.split('=')[1]) : 0,
     voices: (voicesArg?.split('=')[1] as VoiceSelectionMode) ?? 'melody-plus-harmony',
+    melodyTopLine: argv.includes('--melody-top-line'),
   }
 }
 
@@ -107,8 +120,12 @@ async function main() {
   }
 
   const profile = buildY30H2Profile()
+  const paper = buildDefaultPaperProfile()
+  const layout = defaultStripLayoutConfig()
+
   const voiceFiltered = selectVoices(score.events, args.voices)
-  const transposed = voiceFiltered.map((e) => (e.isRest ? e : { ...e, midiPitch: e.midiPitch + args.transpose }))
+  const reduced = args.melodyTopLine ? extractTopLineMelody(voiceFiltered) : voiceFiltered
+  const transposed = reduced.map((e) => (e.isRest ? e : { ...e, midiPitch: e.midiPitch + args.transpose }))
   const tempoAdjusted = args.tempo ? transposed.map((e) => ({ ...e, tempoBpm: args.tempo as number })) : transposed
 
   const mapped = applyMechanismMapping(tempoAdjusted, profile).map((e) => ({
@@ -119,6 +136,7 @@ async function main() {
   const playable = mapped.filter((e) => !e.isRest && e.conversion?.approved && e.conversion.mappedMidiPitch != null)
   const unresolved = mapped.filter((e) => !e.isRest && (!e.conversion || e.conversion.mappedMidiPitch == null))
   const altered = mapped.filter((e) => !e.isRest && e.conversion && e.conversion.reason !== 'exact-match')
+  const conflicts = detectSameLaneConflicts(mapped, profile, paper, layout)
 
   const bpm = playable[0]?.tempoBpm ?? 100
   const bytes = exportConvertedMidi(mapped, score.title)
@@ -133,6 +151,11 @@ async function main() {
   }
   if (unresolved.length > 0) {
     console.log(`  WARNING: ${unresolved.length} note(s) had no playable pitch on this mechanism and were left out of this preview entirely.`)
+  }
+  if (conflicts.length > 0) {
+    console.log(`  WARNING: ${conflicts.length} same-note reset conflict(s) - two notes on the same lane too close together for the hook to reset (used a conservative grid-based check; real distances need the calibration wizard):`)
+    for (const c of conflicts.slice(0, 20)) console.log(`    - ${c.message}`)
+    if (conflicts.length > 20) console.log(`    ... and ${conflicts.length - 20} more`)
   }
 }
 
