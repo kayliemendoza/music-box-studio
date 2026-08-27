@@ -10,9 +10,6 @@ checker, the calibration wizard, the punch-strip editor, playback, and every exp
 [Limitations](#limitations) below for the one area (Optical Music Recognition) that needs
 a separately-run backend service, and exactly what has and hasn't been verified there.
 
-This app lives in its own subfolder and does not touch the COGS108 coursework at the
-repository root.
-
 ## Contents
 
 - `apps/web/` — the frontend (Vite + React + TypeScript). This is the whole app for
@@ -20,8 +17,45 @@ repository root.
 - `services/omr-service/` — an optional backend microservice that wraps the real
   [Audiveris](https://github.com/Audiveris/audiveris) OMR engine, needed only if you want
   to import scanned PDF/image sheet music (as opposed to MusicXML/MIDI).
-- `fixtures/` — a generated, ready-to-print test strip (`test-strip-twinkle.svg/.dxf`) for
-  the built-in public-domain test melody, produced by the app's own export pipeline.
+- `fixtures/` — a generated, ready-to-print test strip (`test-strip-twinkle.svg/.dxf`) and a
+  preview MIDI (`preview-twinkle-y30h2.mid`) for the built-in public-domain test melody,
+  produced by the app's own export pipeline.
+
+## Hearing a preview before printing/punching
+
+Music Box Maniacs (musicboxmaniacs.com/create/) plays back MIDI in-browser, which is a fast
+way to hear an arrangement before committing paper and a hole punch to it. To generate a
+preview MIDI for any song without opening the full UI:
+
+```bash
+cd apps/web
+npm run preview-midi -- path/to/song.musicxml          # or .xml, .mxl, .mid, .midi
+npm run preview-midi -- path/to/song.mid out.mid --tempo=80 --transpose=-2
+```
+
+This reads tempo, rhythm (note durations), and length **directly from the source file** —
+you don't need to specify those separately; `--tempo`/`--transpose` are optional overrides
+for trying variations. It reuses the exact same import/conversion/export code the app UI
+uses (`scripts/exportPreviewMidi.ts`), so what you hear matches what the app will actually
+punch.
+
+**Important when uploading to Music Box Maniacs:** pick **"Grand Illusions 30 (F scale)"**,
+not plain "30." Their plain "30" option plays back using the same mislabeled printed-strip
+notes this whole app exists to work around — "F scale" is the one where the note you hear
+is the note our conversion engine actually calculated.
+
+## Grounded in the community reference guide
+
+This project's mechanism model was cross-checked against [Hanneke Debie's Music Box
+Guide](https://musicboxmaniacs.com/news/music_box_guide) (the community reference for
+paper-roll music boxes). Confirmed matching:
+- the 30-note pitch list (A6 down to F3), verbatim, in `mechanism.ts`
+- the same-lane "hook needs time to reset" reset-conflict rule (different lanes/chords are
+  fine; only *repeats on the same lane* are constrained)
+- the 60–95 BPM recommended hand-crank tempo range
+- the hole's *trailing edge* (not its center) being what actually triggers the tone
+- not taping strips together on a 30-note box (use a paper roll for long pieces instead) -
+  reflected in this app never assuming physical strips get joined
 
 ## Quick start
 

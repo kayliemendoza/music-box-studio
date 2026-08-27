@@ -1,7 +1,13 @@
-import { Midi } from '@tonejs/midi'
+// Default-import + destructure rather than `import { Midi }`: @tonejs/midi has no
+// "exports" map, so a strict Node ESM loader (e.g. running this file directly under
+// tsx/node, as the CLI scripts in scripts/ do) only resolves a default export. Bundler
+// transforms (Vite/Vitest, this app's real runtime) handle either form identically.
+import TonejsMidiPkg from '@tonejs/midi'
 import type { NoteEvent, ImportedScore, PartInfo } from '../model/types'
 import { newId } from '../model/types'
 import { enharmonicSpellings, midiToSharpName } from '../music/pitch'
+
+const { Midi } = TonejsMidiPkg as unknown as typeof import('@tonejs/midi')
 
 export interface ImportResult {
   score: ImportedScore

@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "generate:test-strip": "tsx scripts/generateTestStrip.ts"
+    "generate:test-strip": "tsx scripts/generateTestStrip.ts",
+    "preview-midi": "tsx scripts/exportPreviewMidi.ts"
   },
   "dependencies": {
     "@tonejs/midi": "^2.0.28",
