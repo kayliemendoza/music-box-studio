@@ -48,7 +48,7 @@ export function ReviewPanel() {
           <p className="muted">These pitches don't exist anywhere on the mechanism. Choose a nearest substitute, edit manually, or delete the note. Nothing is changed silently.</p>
           <ul className="review-list">
             {pending.map((ev) => {
-              const suggestions = nearestPlayablePitches(ev.midiPitch, profile, 4)
+              const suggestions = nearestPlayablePitches(ev.midiPitch, profile, 4, ev.harmonicContextPitchClasses)
               return (
                 <li key={ev.id}>
                   <strong>Measure {ev.sourceMeasure}, beat {ev.sourceBeat.toFixed(2)}:</strong> {ev.writtenName} is not available on this mechanism.

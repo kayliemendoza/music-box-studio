@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { buildY30H2Profile } from '../model/mechanism'
 import { parseNoteName } from '../music/pitch'
-import { mapPitchToMechanism, isOutOfRange, applyMechanismMapping } from './playability'
+import { mapPitchToMechanism, isOutOfRange, applyMechanismMapping, nearestPlayablePitches } from './playability'
 import type { NoteEvent } from '../model/types'
 import { newId } from '../model/types'
 
@@ -68,5 +68,23 @@ describe('pitch mapping onto the mechanism', () => {
     const events = [ev({ isRest: true, midiPitch: 0 })]
     const mapped = applyMechanismMapping(events, profile)
     expect(mapped[0].conversion).toBeUndefined()
+  })
+
+  it('breaks an equidistant tie toward a chord tone when harmonic context is known', () => {
+    // G#4 is equidistant (1 semitone) from both G4 and A4. With no chord context the tie
+    // goes to the higher pitch (A4) by convention.
+    const noContext = nearestPlayablePitches(parseNoteName('G#4').midi, profile, 2)
+    expect(noContext[0]).toBe(parseNoteName('A4').midi)
+
+    // A C-major chord (C=0, E=4, G=7) contains G's pitch class but not A's - the same tie
+    // should now favor G4, the consonant choice, over A4.
+    const withCMajorContext = nearestPlayablePitches(parseNoteName('G#4').midi, profile, 2, [0, 4, 7])
+    expect(withCMajorContext[0]).toBe(parseNoteName('G4').midi)
+  })
+
+  it('threads harmonic context from a NoteEvent through applyMechanismMapping', () => {
+    const events = [ev({ midiPitch: parseNoteName('G#4').midi, harmonicContextPitchClasses: [0, 4, 7] })]
+    const mapped = applyMechanismMapping(events, profile)
+    expect(mapped[0].conversion?.mappedMidiPitch).toBe(parseNoteName('G4').midi)
   })
 })

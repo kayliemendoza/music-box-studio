@@ -3,6 +3,8 @@ import type { NoteEvent, ImportedScore, PartInfo } from '../model/types'
 import { newId } from '../model/types'
 import type { NoteLetter, Accidental } from '../music/pitch'
 import { spelledToMidi, enharmonicSpellings } from '../music/pitch'
+import type { ChordSymbol } from '../music/chords'
+import { stepAlterToPitchClass, chordTonePitchClasses } from '../music/chords'
 import { directChild, directChildren, textOf, numberOf } from './xmlHelpers'
 
 export interface ImportResult {
@@ -62,6 +64,7 @@ interface RawNote {
   tieStop: boolean
   tempoBpm: number
   timeSignature: string
+  chordTonePitchClasses: number[] | null
 }
 
 export function parseMusicXmlString(xmlText: string, fallbackTitle = 'Untitled'): ImportResult {
@@ -94,6 +97,7 @@ export function parseMusicXmlString(xmlText: string, fallbackTitle = 'Untitled')
   if (partEls.length === 0) throw new Error('No <part> elements found in this MusicXML file.')
   const rawNotes: RawNote[] = []
   const parts: PartInfo[] = []
+  const chordSymbols: ChordSymbol[] = []
   let maxMeasure = 0
 
   for (const partEl of partEls) {
@@ -116,6 +120,7 @@ export function parseMusicXmlString(xmlText: string, fallbackTitle = 'Untitled')
     const voiceCursorTicks = new Map<number, number>()
     const voicePrevDurationTicks = new Map<number, number>()
     let lastVoiceSeen = 1
+    let currentChordTones: number[] | null = null
 
     measureEls.forEach((measureEl, idx) => {
       const numAttr = measureEl.getAttribute('number')
@@ -148,6 +153,33 @@ export function parseMusicXmlString(xmlText: string, fallbackTitle = 'Untitled')
           if (tempoAttr) {
             const parsed = parseFloat(tempoAttr)
             if (Number.isFinite(parsed) && parsed > 0) tempoBpm = parsed
+          }
+        } else if (child.tagName === 'harmony') {
+          const rootEl = directChild(child, 'root')
+          const kindEl = directChild(child, 'kind')
+          const bassEl = directChild(child, 'bass')
+          if (rootEl && kindEl) {
+            const rootStep = textOf(directChild(rootEl, 'root-step')) ?? 'C'
+            const rootAlter = numberOf(directChild(rootEl, 'root-alter')) ?? 0
+            // <kind>'s element text is the semantic value (e.g. "minor", "dominant-seventh")
+            // that chordTonePitchClasses() looks up; its `text` attribute is just a display
+            // abbreviation (e.g. "m", "7") not meant for that purpose.
+            const kindText = kindEl.textContent?.trim() || 'major'
+            let bassPitchClass: number | undefined
+            if (bassEl) {
+              const bassStep = textOf(directChild(bassEl, 'bass-step'))
+              const bassAlter = numberOf(directChild(bassEl, 'bass-alter')) ?? 0
+              if (bassStep) bassPitchClass = stepAlterToPitchClass(bassStep, bassAlter)
+            }
+            const symbol: ChordSymbol = {
+              rootPitchClass: stepAlterToPitchClass(rootStep, rootAlter),
+              kindText,
+              bassPitchClass,
+              startBeat: measureStartBeatAbs + (voiceCursorTicks.get(lastVoiceSeen) ?? 0) / divisions,
+              sourceMeasure: measureNumber,
+            }
+            chordSymbols.push(symbol)
+            currentChordTones = [...chordTonePitchClasses(symbol)]
           }
         } else if (child.tagName === 'note') {
           const noteEl = child
@@ -218,6 +250,7 @@ export function parseMusicXmlString(xmlText: string, fallbackTitle = 'Untitled')
             tieStop,
             tempoBpm,
             timeSignature: `${beatsPerMeasure}/${beatType}`,
+            chordTonePitchClasses: currentChordTones,
           })
         } else if (child.tagName === 'forward') {
           const durationTicks = numberOf(directChild(child, 'duration')) ?? 0
@@ -288,6 +321,7 @@ export function parseMusicXmlString(xmlText: string, fallbackTitle = 'Untitled')
       importConfidence: 1,
       needsReview: false,
       status: 'original',
+      harmonicContextPitchClasses: n.chordTonePitchClasses ?? undefined,
     }
   })
 
@@ -322,6 +356,7 @@ export function parseMusicXmlString(xmlText: string, fallbackTitle = 'Untitled')
     measureCount: maxMeasure,
     sourceFormat: 'musicxml',
     sourceMusicXml: xmlText,
+    chordSymbols: chordSymbols.length > 0 ? chordSymbols : undefined,
   }
 
   return { score, warnings }

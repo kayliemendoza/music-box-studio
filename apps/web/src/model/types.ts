@@ -1,4 +1,5 @@
 /** Normalized note-event model shared by every import path (MusicXML, MIDI, OMR, manual entry). */
+import type { ChordSymbol } from '../music/chords'
 
 export type EventStatus = 'original' | 'mapped' | 'changed' | 'removed' | 'unresolved'
 
@@ -39,6 +40,14 @@ export interface NoteEvent {
 
   isRest: boolean
 
+  /**
+   * Pitch classes (0-11) of the harmony active at this note's beat, when the source
+   * carries chord symbols (lead-sheet style: <harmony> in MusicXML). Used to prefer a
+   * consonant substitute over a purely nearest one when the note's own pitch isn't
+   * available on the mechanism. Absent when the source has no chord symbols.
+   */
+  harmonicContextPitchClasses?: number[]
+
   // Import provenance
   importConfidence: number // 0..1. 1.0 for MusicXML/MIDI (deterministic). OMR sets <1 and flags for review.
   needsReview: boolean
@@ -66,6 +75,8 @@ export interface ImportedScore {
   omrPageImages?: string[] // data URLs, only for OMR-sourced scores
   /** Original MusicXML text, when the source format carries engraved notation (musicxml/omr). Used to render conventional notation via OSMD. */
   sourceMusicXml?: string
+  /** Chord symbols (lead-sheet <harmony>), when the source carries them. */
+  chordSymbols?: ChordSymbol[]
 }
 
 export interface PartInfo {
