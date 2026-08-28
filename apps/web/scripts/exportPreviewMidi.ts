@@ -1,7 +1,8 @@
 /**
  * Generates a preview MIDI (mechanism-mapped, holes-only) from ANY sheet music file -
- * MusicXML (.musicxml/.xml/.mxl) or MIDI (.mid/.midi) - for uploading into Music Box
- * Maniacs' editor (musicboxmaniacs.com/create/) to hear before printing/punching.
+ * MusicXML (.musicxml/.xml/.mxl), MIDI (.mid/.midi), or ASCII guitar tab (.tab/.txt) -
+ * for uploading into Music Box Maniacs' editor (musicboxmaniacs.com/create/) to hear
+ * before printing/punching.
  *
  * Usage:
  *   npx tsx scripts/exportPreviewMidi.ts <input-file> [output.mid] [options]
@@ -35,6 +36,7 @@ const dom = new JSDOM('')
 
 const { parseMusicXmlString } = await import('../src/import/musicxml.ts')
 const { parseMidiBuffer } = await import('../src/import/midi.ts')
+const { parseGuitarTabText } = await import('../src/import/guitarTab.ts')
 const { buildY30H2Profile } = await import('../src/model/mechanism.ts')
 const { buildDefaultPaperProfile } = await import('../src/model/paper.ts')
 const { defaultStripLayoutConfig } = await import('../src/convert/layout.ts')
@@ -110,8 +112,10 @@ async function main() {
   } else if (ext === '.mid' || ext === '.midi') {
     const arrayBuffer = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer
     ;({ score, warnings } = parseMidiBuffer(arrayBuffer, title))
+  } else if (ext === '.tab' || ext === '.txt') {
+    ;({ score, warnings } = parseGuitarTabText(buf.toString('utf-8'), title))
   } else {
-    throw new Error(`Unsupported file type "${ext}". Use .musicxml, .xml, .mxl, .mid, or .midi.`)
+    throw new Error(`Unsupported file type "${ext}". Use .musicxml, .xml, .mxl, .mid, .midi, .tab, or .txt.`)
   }
 
   if (warnings.length > 0) {

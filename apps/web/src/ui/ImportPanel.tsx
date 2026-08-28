@@ -6,6 +6,7 @@ import { importFromOmr } from '../import/omrImport'
 import { OmrRequestError } from '../import/omrClient'
 import { TWINKLE_MUSICXML } from '../fixtures/twinkleTwinkle'
 import { parseMusicXmlString } from '../import/musicxml'
+import { parseGuitarTabText } from '../import/guitarTab'
 
 const OMR_SERVICE_URL = (import.meta.env.VITE_OMR_SERVICE_URL as string | undefined) ?? ''
 
@@ -28,6 +29,11 @@ export function ImportPanel() {
       } else if (lower.endsWith('.mid') || lower.endsWith('.midi')) {
         const { score, warnings } = await parseMidiFile(file)
         loadScore(score, warnings)
+      } else if (lower.endsWith('.tab') || lower.endsWith('.txt')) {
+        const text = await file.text()
+        const title = file.name.replace(/\.[^.]+$/, '')
+        const { score, warnings } = parseGuitarTabText(text, title)
+        loadScore(score, warnings)
       } else if (lower.endsWith('.pdf') || lower.endsWith('.png') || lower.endsWith('.jpg') || lower.endsWith('.jpeg')) {
         if (!OMR_SERVICE_URL) {
           setError(
@@ -41,7 +47,9 @@ export function ImportPanel() {
           ])
         }
       } else {
-        setError(`Unsupported file type: ${file.name}. Supported: .musicxml, .xml, .mxl, .mid, .midi (PDF/image via OMR service, see README).`)
+        setError(
+          `Unsupported file type: ${file.name}. Supported: .musicxml, .xml, .mxl, .mid, .midi, .tab/.txt (ASCII guitar tab) (PDF/image via OMR service, see README).`,
+        )
       }
     } catch (e) {
       if (e instanceof OmrRequestError) {
@@ -63,9 +71,11 @@ export function ImportPanel() {
     <div className="panel">
       <h2>1. Import sheet music</h2>
       <p className="muted">
-        MusicXML (.musicxml/.xml/.mxl) and MIDI (.mid/.midi) are parsed directly in your browser - nothing is uploaded
-        anywhere. PDF/image scans go through a separate Optical Music Recognition service and always require manual
-        verification before export.
+        MusicXML (.musicxml/.xml/.mxl), MIDI (.mid/.midi), and ASCII guitar tab (.tab/.txt) are parsed directly in
+        your browser - nothing is uploaded anywhere. PDF/image scans go through a separate Optical Music Recognition
+        service and always require manual verification before export. Guitar tab has no explicit rhythm or tempo
+        notation, so every note is flagged for review - confirm timing and tempo against the recording before
+        exporting.
       </p>
       <div
         className="dropzone"
@@ -77,11 +87,11 @@ export function ImportPanel() {
         }}
         onClick={() => inputRef.current?.click()}
       >
-        {busy ? 'Parsing...' : 'Click or drop a .musicxml / .mxl / .mid / .pdf / image file here'}
+        {busy ? 'Parsing...' : 'Click or drop a .musicxml / .mxl / .mid / .tab / .txt / .pdf / image file here'}
         <input
           ref={inputRef}
           type="file"
-          accept=".musicxml,.xml,.mxl,.mid,.midi,.pdf,.png,.jpg,.jpeg"
+          accept=".musicxml,.xml,.mxl,.mid,.midi,.tab,.txt,.pdf,.png,.jpg,.jpeg"
           style={{ display: 'none' }}
           onChange={(e) => {
             const f = e.target.files?.[0]
