@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useStudioStore } from '../state/store'
-import { analyzeVoices, type VoiceSelectionMode } from '../convert/voiceSelection'
+import { analyzeVoices, selectVoices, type VoiceSelectionMode } from '../convert/voiceSelection'
+import { extractTopLineMelody } from '../convert/melodyExtraction'
 import { scoreTranspositionOptions } from '../convert/transposition'
 
 const MODES: { value: VoiceSelectionMode; label: string }[] = [
@@ -15,6 +16,8 @@ export function ConvertPanel() {
   const mode = useStudioStore((s) => s.voiceSelectionMode)
   const customKeys = useStudioStore((s) => s.customVoiceKeys)
   const setVoiceSelectionMode = useStudioStore((s) => s.setVoiceSelectionMode)
+  const melodyTopLine = useStudioStore((s) => s.melodyTopLine)
+  const setMelodyTopLine = useStudioStore((s) => s.setMelodyTopLine)
   const transposition = useStudioStore((s) => s.transpositionSemitones)
   const setTransposition = useStudioStore((s) => s.setTransposition)
   const profile = useStudioStore((s) => s.mechanismProfile)
@@ -23,10 +26,21 @@ export function ConvertPanel() {
 
   const voiceGroups = useMemo(() => (score ? analyzeVoices(score.events) : []), [score])
 
+  // Mirrors the store's recompute() pipeline (voice selection -> optional top-line
+  // reduction), so this preview scores the notes that will actually be converted -
+  // not the raw, unfiltered score. Scoring transposition on the wrong note set (e.g. a
+  // dense chordal part before reduction) gives a recommendation that doesn't hold once
+  // the real reduction is applied.
+  const reducedForPreview = useMemo(() => {
+    if (!score) return []
+    const voiceFiltered = selectVoices(score.events, mode, new Set(customKeys))
+    return melodyTopLine ? extractTopLineMelody(voiceFiltered) : voiceFiltered
+  }, [score, mode, customKeys, melodyTopLine])
+
   const transpositionOptions = useMemo(() => {
     if (!score) return []
-    return scoreTranspositionOptions(score.events, profile, paper, layout)
-  }, [score, profile, paper, layout])
+    return scoreTranspositionOptions(reducedForPreview, profile, paper, layout)
+  }, [score, reducedForPreview, profile, paper, layout])
 
   if (!score) return <div className="panel muted">Import a score first.</div>
 
@@ -61,6 +75,18 @@ export function ConvertPanel() {
             ))}
           </div>
         )}
+        <label className="field-row" style={{ marginTop: 8 }}>
+          <span>
+            Reduce chords to top-line melody
+            <br />
+            <small className="muted">
+              For parts where the melody is written as the top note of a chord rather than its own voice (common in
+              pop-piano arrangements) - collapses every simultaneous chord in the selected voice(s) down to its
+              highest note. Voice selection alone can't separate "melody note" from "chord tone" within one voice.
+            </small>
+          </span>
+          <input type="checkbox" checked={melodyTopLine} onChange={(e) => setMelodyTopLine(e.target.checked)} />
+        </label>
       </section>
 
       <section>

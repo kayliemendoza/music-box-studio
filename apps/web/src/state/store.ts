@@ -8,6 +8,7 @@ import type { StripLayoutConfig } from '../convert/layout'
 import { defaultStripLayoutConfig } from '../convert/layout'
 import { applyMechanismMapping } from '../convert/playability'
 import { selectVoices, type VoiceSelectionMode } from '../convert/voiceSelection'
+import { extractTopLineMelody } from '../convert/melodyExtraction'
 import { validateForExport, type ValidationResult } from '../convert/validation'
 
 interface ManualOverride {
@@ -32,6 +33,12 @@ export interface StudioState {
 
   voiceSelectionMode: VoiceSelectionMode
   customVoiceKeys: string[]
+  /**
+   * Collapse every simultaneous chord in the selected voice(s) down to its highest note.
+   * For scores where the melody is written as the top note of a chord rather than its own
+   * voice (common in pop-piano arrangements) - voice selection alone can't separate those.
+   */
+  melodyTopLine: boolean
   transpositionSemitones: number
   showPrintedLabels: boolean
 
@@ -55,6 +62,7 @@ export interface StudioState {
   setPaperProfile: (p: PaperProfile) => void
   updateLayoutConfig: (patch: Partial<StripLayoutConfig>) => void
   setVoiceSelectionMode: (mode: VoiceSelectionMode, customKeys?: string[]) => void
+  setMelodyTopLine: (v: boolean) => void
   setTransposition: (semitones: number) => void
   setShowPrintedLabels: (v: boolean) => void
 
@@ -98,6 +106,7 @@ export const useStudioStore = create<StudioState>((set, get) => ({
 
   voiceSelectionMode: 'melody-only',
   customVoiceKeys: [],
+  melodyTopLine: false,
   transpositionSemitones: 0,
   showPrintedLabels: false,
 
@@ -135,6 +144,11 @@ export const useStudioStore = create<StudioState>((set, get) => ({
 
   setVoiceSelectionMode: (mode, customKeys) => {
     set({ voiceSelectionMode: mode, customVoiceKeys: customKeys ?? get().customVoiceKeys })
+    get().recompute()
+  },
+
+  setMelodyTopLine: (v) => {
+    set({ melodyTopLine: v, manualOverrides: {} })
     get().recompute()
   },
 
@@ -300,7 +314,8 @@ export const useStudioStore = create<StudioState>((set, get) => ({
     const s = get()
     const baseEvents = s.score ? s.score.events : []
     const voiceFiltered = selectVoices(baseEvents, s.voiceSelectionMode, new Set(s.customVoiceKeys))
-    const transposed = [...voiceFiltered, ...s.manualEvents].map((e) =>
+    const reduced = s.melodyTopLine ? extractTopLineMelody(voiceFiltered) : voiceFiltered
+    const transposed = [...reduced, ...s.manualEvents].map((e) =>
       e.isRest || s.manualEvents.includes(e) ? e : { ...e, midiPitch: e.midiPitch + s.transpositionSemitones },
     )
     const mapped = applyMechanismMapping(transposed, s.mechanismProfile).map((e) => {
